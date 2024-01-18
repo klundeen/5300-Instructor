@@ -10,4 +10,5 @@ The database directory must exist, but needn't have any contents. Running sql530
 
 ## Tags
 - <code>Milestone1_prep</code> is just some bare bones stuff to get students started on Milestone 1.
+- <code>Milestone2h</code> has the intructor-provided files for Milestone2. (Note that heap_storage.cpp is just a stub.)
 

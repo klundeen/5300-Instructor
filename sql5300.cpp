@@ -5,13 +5,21 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <cstring>
+#include <iostream>
+#include <string>
 #include <cassert>
 #include "db_cxx.h"
 #include "SQLParser.h"
+#include "heap_storage.h"
 
 using namespace std;
 using namespace hsql;
+
+/*
+ * we allocate and initialize the _DB_ENV global
+ */
+DbEnv *_DB_ENV;
 
 /**
  * Execute an SQL statement (but for now, just spit back the SQL)
@@ -35,7 +43,7 @@ string execute(const SQLStatement *stmt) {
  * Main entry point of the sql5300 program
  * @args dbenvpath  the path to the BerkeleyDB database environment
  */
-int main(int argc, char **argv) {
+int main(int argc, char *argv[]) {
 
     // Open/create the db enviroment
     if (argc != 2) {
@@ -53,6 +61,7 @@ int main(int argc, char **argv) {
         cerr << "(sql5300: " << exc.what() << ")";
         exit(1);
     }
+    _DB_ENV = &env;
 
     // Enter the SQL shell loop
     while (true) {
@@ -63,6 +72,10 @@ int main(int argc, char **argv) {
             continue;  // blank line -- just skip
         if (query == "quit")
             break;  // only way to get out
+        if (query == "test") {
+            cout << "test_heap_storage: " << (test_heap_storage() ? "ok" : "failed") << endl;
+            continue;
+        }
 
         // use the Hyrise sql parser to get us our AST
         SQLParserResult *result = SQLParser::parseSQLString(query);
