@@ -316,9 +316,10 @@ void HeapFile::db_open(uint flags) {
     this->db.open(nullptr, this->dbfilename.c_str(), nullptr, DB_RECNO, flags, 0644);
 
     if (flags == 0) {
-        DB_BTREE_STAT stat;
+        DB_BTREE_STAT *stat;
         this->db.stat(nullptr, &stat, DB_FAST_STAT);
-        this->last = stat.bt_ndata;
+        this->last = stat->bt_ndata;
+		free(stat);
     } else {
         this->last = 0;
     }
