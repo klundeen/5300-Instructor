@@ -40,7 +40,7 @@ RecordID SlottedPage::add(const Dbt *data) {
     u16 id = ++this->num_records;
     u16 size = (u16) data->get_size();
     this->end_free -= size;
-    u16 loc = this->end_free + 1;
+    u16 loc = this->end_free + 1U;
     put_header();
     put_header(id, size, loc);
     memcpy(this->address(loc), data->get_data(), size);
@@ -121,8 +121,8 @@ RecordIDs *SlottedPage::ids(void) {
  * @param id    the id of the header to fetch
  */
 void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id) {
-    size = get_n(4 * id);
-    loc = get_n(4 * id + 2);
+    size = get_n((u16) 4 * id);
+    loc = get_n((u16) (4 * id + 2));
 }
 
 /**
@@ -136,8 +136,8 @@ void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
         size = this->num_records;
         loc = this->end_free;
     }
-    put_n(4 * id, size);
-    put_n(4 * id + 2, loc);
+    put_n((u16) 4 * id, size);
+    put_n((u16) (4 * id + 2), loc);
 }
 
 /**
@@ -147,8 +147,13 @@ void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
  * @return       true if there is enough room, false otherwise
  */
 bool SlottedPage::has_room(u_int16_t size) {
-    u16 available = this->end_free - 4 * (this->num_records + 1);
-    return size <= available;
+    u16 headers = (u16) (4 * (this->num_records + 1));
+    u16 unused;
+    if (this->end_free <= headers)
+        unused = 0;
+    else
+        unused = this->end_free - headers;
+    return size + (u16)4 <= unused;
 }
 
 /**
