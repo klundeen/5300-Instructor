@@ -81,6 +81,32 @@ string ParseTreeToString::operator_expression(const Expr *expr) {
         case Expr::OR:
             ret += "OR";
             break;
+        case Expr::NONE:
+            break;
+        case Expr::BETWEEN:
+            break;
+        case Expr::CASE:
+            break;
+        case Expr::NOT_EQUALS:
+            break;
+        case Expr::LESS_EQ:
+            break;
+        case Expr::GREATER_EQ:
+            break;
+        case Expr::LIKE:
+            break;
+        case Expr::NOT_LIKE:
+            break;
+        case Expr::IN:
+            break;
+        case Expr::NOT:
+            break;
+        case Expr::UMINUS:
+            break;
+        case Expr::ISNULL:
+            break;
+        case Expr::EXISTS:
+            break;
         default:
             ret += "???";
             break;
@@ -99,9 +125,11 @@ string ParseTreeToString::expression(const Expr *expr) {
         case kExprColumnRef:
             if (expr->table != NULL)
                 ret += string(expr->table) + ".";
-        case kExprLiteralString:
             ret += expr->name;
             break;
+        case kExprLiteralString:
+            ret += string("\"") + expr->name + "\"";
+			break;
         case kExprLiteralFloat:
             ret += to_string(expr->fval);
             break;
@@ -206,25 +234,64 @@ string ParseTreeToString::select(const SelectStatement *stmt) {
 }
 
 string ParseTreeToString::insert(const InsertStatement *stmt) {
-    return "INSERT ...";
+    string ret("INSERT INTO ");
+    ret += stmt->tableName;
+    if (stmt->type == InsertStatement::kInsertSelect)
+        return ret + "SELECT ...";
+
+    bool doComma = false;
+    if (stmt->columns != NULL) {
+        ret += " (";
+        for (auto const &column: *stmt->columns) {
+            if (doComma)
+                ret += ", ";
+            ret += column;
+            doComma = true;
+        }
+        ret += ")";
+    }
+    ret += " VALUES (";
+    doComma = false;
+    for (Expr *expr : *stmt->values) {
+        if (doComma)
+            ret += ", ";
+        ret += expression(expr);
+        doComma = true;
+    }
+    ret += ")";
+    return ret;
 }
 
 string ParseTreeToString::create(const CreateStatement *stmt) {
     string ret("CREATE ");
-    if (stmt->type != CreateStatement::kTable)
-        return ret + "...";
-    ret += "TABLE ";
-    if (stmt->ifNotExists)
-        ret += "IF NOT EXISTS ";
-    ret += string(stmt->tableName) + " (";
-    bool doComma = false;
-    for (ColumnDefinition *col : *stmt->columns) {
-        if (doComma)
-            ret += ", ";
-        ret += column_definition(col);
-        doComma = true;
+    if (stmt->type == CreateStatement::kTable) {
+        ret += "TABLE ";
+        if (stmt->ifNotExists)
+            ret += "IF NOT EXISTS ";
+        ret += string(stmt->tableName) + " (";
+        bool doComma = false;
+        for (ColumnDefinition *col : *stmt->columns) {
+            if (doComma)
+                ret += ", ";
+            ret += column_definition(col);
+            doComma = true;
+        }
+        ret += ")";
+    } else if (stmt->type == CreateStatement::kIndex) {
+        ret += "INDEX ";
+        ret += string(stmt->indexName) + " ON ";
+        ret += string(stmt->tableName) + " USING " + stmt->indexType + " (";
+        bool doComma = false;
+        for (auto const &col : *stmt->indexColumns) {
+            if (doComma)
+                ret += ", ";
+            ret += string(col);
+            doComma = true;
+        }
+        ret += ")";
+    } else {
+        ret += "...";
     }
-    ret += ")";
     return ret;
 }
 
@@ -263,12 +330,24 @@ string ParseTreeToString::show(const ShowStatement *stmt) {
     return ret;
 }
 
+string ParseTreeToString::del(const DeleteStatement *stmt) {
+    string ret("DELETE FROM ");
+    ret += stmt->tableName;
+    if (stmt->expr != NULL) {
+        ret += " WHERE ";
+        ret += expression(stmt->expr);
+    }
+    return ret;
+}
+
 string ParseTreeToString::statement(const SQLStatement *stmt) {
     switch (stmt->type()) {
         case kStmtSelect:
             return select((const SelectStatement *) stmt);
         case kStmtInsert:
             return insert((const InsertStatement *) stmt);
+        case kStmtDelete:
+            return del((const DeleteStatement *) stmt);
         case kStmtCreate:
             return create((const CreateStatement *) stmt);
         case kStmtDrop:
@@ -279,7 +358,6 @@ string ParseTreeToString::statement(const SQLStatement *stmt) {
         case kStmtError:
         case kStmtImport:
         case kStmtUpdate:
-        case kStmtDelete:
         case kStmtPrepare:
         case kStmtExecute:
         case kStmtExport:
