@@ -234,7 +234,10 @@ string ParseTreeToString::drop(const DropStatement *stmt) {
         case DropStatement::kTable:
             ret += "TABLE ";
             break;
-        default:
+	case DropStatement::kIndex:
+	    ret += string("INDEX ") + stmt->indexName + " FROM ";
+	    break;
+    default:
             ret += "? ";
     }
     ret += stmt->name;
